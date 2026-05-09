@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Test Projects/">
+    <Project Path="tests/Wyrm.ModBusClient.IntegrationTests/Wyrm.ModBusClient.IntegrationTests.csproj" Id="97bcfa25-e27c-4502-8e64-b085ddcb078f" />
+    <Project Path="tests/Wyrm.ModBusClient.UnitTests/Wyrm.ModBusClient.UnitTests.csproj" />
+  </Folder>
+  <Project Path="src/Wyrm.ModBusClient/Wyrm.ModBusClient.csproj" />
+</Solution>
