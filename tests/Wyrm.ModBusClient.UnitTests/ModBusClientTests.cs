@@ -64,6 +64,27 @@ public class ModBusClientTests
 
     #endregion
 
+    #region Transaction Id
+
+    [Fact]
+    public void TransactionId_Should_Get_What_Is_Set()
+    {
+        const ushort transactionId = 0x5959;
+        ushort setTransactionId = 0;
+        Mock.Get(_modBusCommand)
+            .SetupSet(x => x.TransactionId = It.IsAny<ushort>())
+            .Callback<ushort>(ui => setTransactionId = ui);
+        Mock.Get(_modBusCommand)
+            .SetupGet(x => x.TransactionId)
+            .Returns(() => setTransactionId);
+
+        _modbusClient.TransactionId = transactionId;
+
+        _modbusClient.TransactionId.ShouldBe(transactionId);
+    }
+
+    #endregion
+
     #region Connect
 
     [Fact]

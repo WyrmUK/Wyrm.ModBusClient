@@ -40,6 +40,20 @@ public class ModBusConnectionTests
         _modBusConnection.UnitIdentifier.ShouldBe(unitIdentitier);
     }
 
+    #region Transaction Id
+
+    [Fact]
+    public void TransactionId_Should_Get_What_Is_Set()
+    {
+        const ushort transactionId = 0x5959;
+
+        _modBusConnection.TransactionId = transactionId;
+
+        _modBusConnection.TransactionId.ShouldBe(transactionId);
+    }
+
+    #endregion
+
     #endregion
 
     #region Connect
@@ -98,17 +112,19 @@ public class ModBusConnectionTests
 
     private const byte FunctionNumber = 2;
     private const byte UnitIdentifier = 5;
+    private const ushort TransactionId = 0x5959;
     private static readonly ushort[] UshortParameters = [ 0x0001, 0xFFFF ];
     private static readonly byte[] ByteParameters = [ 0x01, 0xFF ];
-    private static readonly byte[] ExpectedCommand = [ 0, 1, 0, 0, 0, 8, UnitIdentifier, FunctionNumber, 0x00, 0x01, 0xFF, 0xFF, 0x01, 0xFF ];
-    private static readonly byte[] ExpectedResult = [ 0, 1, 0, 0, 0, 5, UnitIdentifier, FunctionNumber, 3, 4, 5 ];
+    private static readonly byte[] ExpectedCommand = [ TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 8, UnitIdentifier, FunctionNumber, 0x00, 0x01, 0xFF, 0xFF, 0x01, 0xFF ];
+    private static readonly byte[] ExpectedResult = [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, UnitIdentifier, FunctionNumber, 3, 4, 5 ];
 
     public static readonly TheoryData<byte[], ModBusExceptionCode> ErrorData = new()
     {
-        { [0, 1, 0], ModBusExceptionCode.InsufficientData },
-        { [1, 1, 0, 0, 0, 5, 1, FunctionNumber, 3, 4, 5], ModBusExceptionCode.IncorrectTransactionIdReceived },
-        { [0, 1, 0, 0, 0, 5, 1, FunctionNumber + 1, 3, 4, 5], ModBusExceptionCode.IncorrectFunctionReceived },
-        { [0, 1, 0, 0, 0, 5, 1, 0x80 + FunctionNumber, 1], ModBusExceptionCode.IllegalFunction }
+        { [TransactionId >> 8, TransactionId & 0xFF, 0], ModBusExceptionCode.InsufficientData },
+        { [1, TransactionId & 0xFF, 0, 0, 0, 5, 1, FunctionNumber, 3, 4, 5], ModBusExceptionCode.IncorrectTransactionIdReceived },
+        { [TransactionId >> 8, 1, 0, 0, 0, 5, 1, FunctionNumber, 3, 4, 5], ModBusExceptionCode.IncorrectTransactionIdReceived },
+        { [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, 1, FunctionNumber + 1, 3, 4, 5], ModBusExceptionCode.IncorrectFunctionReceived },
+        { [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, 1, 0x80 + FunctionNumber, 1], ModBusExceptionCode.IllegalFunction }
     };
 
     [Fact]
@@ -153,10 +169,13 @@ public class ModBusConnectionTests
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
         _modBusConnection.UnitIdentifier = UnitIdentifier;
+        _modBusConnection.TransactionId = TransactionId;
 
         var result = await _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken);
 
         result.ShouldBeEquivalentTo(new ReadOnlyMemory<byte>(ExpectedResult).Slice(8));
+
+        _modBusConnection.TransactionId.ShouldBe((ushort)(TransactionId + 1));
     }
 
     [Theory]

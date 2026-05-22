@@ -17,6 +17,12 @@ internal class ModBusCommand(
         set => _modBusConnection.UnitIdentifier = value;
     }
 
+    public ushort TransactionId
+    {
+        get => _modBusConnection.TransactionId;
+        set => _modBusConnection.TransactionId = value;
+    }
+
     public ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken) =>
         _modBusConnection.ConnectAsync(endPoint, cancellationToken);
 

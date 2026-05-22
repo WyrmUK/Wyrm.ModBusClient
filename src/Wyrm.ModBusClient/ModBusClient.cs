@@ -29,6 +29,12 @@ internal sealed class ModBusClient(
         set => _modBusCommand.UnitIdentifier = value;
     }
 
+    public ushort TransactionId
+    {
+        get => _modBusCommand.TransactionId;
+        set => _modBusCommand.TransactionId = value;
+    }
+
     public async ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken)
     {
         if (_logger.IsEnabled(LogLevel.Information))

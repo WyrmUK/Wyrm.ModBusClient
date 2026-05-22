@@ -21,11 +21,20 @@ Make sure you dispose of the client when finished with it.
 
 ## Functions
 Only the TCP specific functions have been implemented.
-You can set the Unit Identifier before calling any function.
+You can set the Unit Identifier before calling any function (it will keep the value set for subsequent commands).
 ```csharp
 await _modBusClient.ConnectAsync(endPoint, ct);
 ...
 _modBusClient.UnitIdentifier = 0xFF;
+var coils = await _modBusClient.ReadCoilsAsync(1, 5, ct);
+...
+_modBusClient.Close();
+```
+You can also set the Transaction Id before calling any function. The Transaction Id increments after each function is called so if you need it to always be a specific value then you need to set it before calling a function.
+```csharp
+await _modBusClient.ConnectAsync(endPoint, ct);
+...
+_modBusClient.TransactionId = 0x5959;
 var coils = await _modBusClient.ReadCoilsAsync(1, 5, ct);
 ...
 _modBusClient.Close();

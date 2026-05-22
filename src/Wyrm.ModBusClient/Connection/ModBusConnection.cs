@@ -8,13 +8,14 @@ internal sealed class ModBusConnection(
     IModBusSocketFactory _modBusSocketFactory) : IModBusConnection
 {
     private IModBusSocket? _socket;
-    private ushort _transactionId = 0;
     private readonly byte[] _protocolIdentifier = [0, 0];
     private const int MbapHeaderPlusFunctionLength = 8;
     private const byte ExceptionFlag = 0x80;
     private const byte FunctionMask = 0x7F;
 
     public byte UnitIdentifier { get; set; } = 1;
+
+    public ushort TransactionId { get; set; } = 1;
 
     public ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken)
     {
@@ -102,8 +103,7 @@ internal sealed class ModBusConnection(
     {
         var buffer = new List<byte>();
 
-        ++_transactionId;
-        buffer.AddRange(GetBytes(_transactionId));
+        buffer.AddRange(GetBytes(TransactionId++));
 
         buffer.Add(_protocolIdentifier[1]);
         buffer.Add(_protocolIdentifier[0]);

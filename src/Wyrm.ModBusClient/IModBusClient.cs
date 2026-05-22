@@ -14,6 +14,11 @@ public interface IModBusClient
     /// </summary>
     byte UnitIdentifier { get; set; }
     /// <summary>
+    /// Gets and sets the Transaction Id (defaults to 1 initially).
+    /// It is incremented after each command so you need to set it before calling any method if you want it to remain at a specific value.
+    /// </summary>
+    ushort TransactionId { get; set; }
+    /// <summary>
     /// Connects the client to a ModBus server.
     /// </summary>
     /// <param name="endPoint">The <see cref="IPEndPoint"/> to connect to.</param>
