@@ -20,6 +20,8 @@ internal sealed class ModBusConnection(
 
     public Func<IList<byte>, IList<byte>>? PduFramer { get; set; }
 
+    public Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>? PduDeframer { get; set; }
+
     public ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken)
     {
         _socket ??= _modBusSocketFactory.CreateSocket(endPoint);
@@ -56,6 +58,12 @@ internal sealed class ModBusConnection(
 
         if (!data[..2].Span.SequenceEqual(receivedData[..2].Span))
             throw new ModBusClientException("ModBus Client: Incorrect transaction id received.", ModBusExceptionCode.IncorrectTransactionIdReceived);
+
+        if (PduDeframer != null)
+        {
+            var deframedPdu = PduDeframer.Invoke(receivedData[(MbapHeaderPlusFunctionLength - 2)..]);
+            receivedData = new ReadOnlyMemory<byte>(receivedData[..(MbapHeaderPlusFunctionLength - 2)].ToArray().Concat(deframedPdu.ToArray()).ToArray());
+        }
 
         var receivedFunction = receivedData.Span[MbapHeaderPlusFunctionLength - 1];
 

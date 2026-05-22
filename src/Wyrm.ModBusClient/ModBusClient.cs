@@ -47,6 +47,12 @@ internal sealed class ModBusClient(
         set => _modBusCommand.PduFramer = value;
     }
 
+    public Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>? PduDeframer
+    {
+        get => _modBusCommand.PduDeframer;
+        set => _modBusCommand.PduDeframer = value;
+    }
+
     public async ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken)
     {
         if (_logger.IsEnabled(LogLevel.Information))

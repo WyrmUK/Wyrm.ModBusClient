@@ -29,6 +29,13 @@ public interface IModBusClient
     /// </summary>
     Func<IList<byte>, IList<byte>>? PduFramer { get; set; }
     /// <summary>
+    /// Gets and sets an optional deframer function (defaults to null).
+    /// If specified, this is called with the framed PDU (everything after the length) and should return the deframed PDU.
+    /// The deframed PDU should represent a valid extended MODBUS PDU (Unit Identifier + PDU).
+    /// </summary>
+    Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>? PduDeframer { get; set; }
+
+    /// <summary>
     /// Connects the client to a ModBus server.
     /// </summary>
     /// <param name="endPoint">The <see cref="IPEndPoint"/> to connect to.</param>

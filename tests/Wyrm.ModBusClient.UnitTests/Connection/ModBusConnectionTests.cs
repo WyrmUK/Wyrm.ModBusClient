@@ -86,6 +86,22 @@ public class ModBusConnectionTests
 
     #endregion
 
+    #region Pdu Deframer
+
+    [Fact]
+    public void PduDeframer_Should_Get_What_Is_Set()
+    {
+        _modBusConnection.PduDeframer = PduDeframer;
+
+        _modBusConnection.PduDeframer.ShouldBe(PduDeframer);
+
+        return;
+
+        static ReadOnlyMemory<byte> PduDeframer(ReadOnlyMemory<byte> command) => command;
+    }
+
+    #endregion
+
     #region Connect
 
     [Fact]
@@ -195,11 +211,13 @@ public class ModBusConnectionTests
             .Callback<ReadOnlyMemory<byte>, CancellationToken>((sent, _) =>
             {
                 var expectedCommand = withFramer
-                    ? ExpectedCommand[0..5].Concat([(byte)(ExpectedCommand[5] + 2)]).Concat([FrameStart]).Concat(ExpectedCommand[6..]).Concat([FrameEnd]).ToArray()
+                    ? [.. ExpectedCommand[0..5], (byte)(ExpectedCommand[5] + 2), FrameStart, .. ExpectedCommand[6..], FrameEnd]
                     : ExpectedCommand;
                 if (!sent.Span.SequenceEqual(expectedCommand)) return;
 
-                receiveData = ExpectedResult;
+                receiveData = withFramer
+                    ? [.. ExpectedResult[0..5], (byte)(ExpectedResult[5] + 2), FrameStart, .. ExpectedResult[6..], FrameEnd]
+                    : ExpectedResult;
             });
         Mock.Get(_modBusSocket)
             .Setup(x => x.ReceiveAsync(TestContext.Current.CancellationToken))
@@ -212,11 +230,12 @@ public class ModBusConnectionTests
         if (withFramer)
         {
             _modBusConnection.PduFramer = PduFramer;
+            _modBusConnection.PduDeframer = PduDeframer;
         }
 
         var result = await _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken);
 
-        result.ShouldBeEquivalentTo(new ReadOnlyMemory<byte>(ExpectedResult).Slice(8));
+        result.ToArray().ShouldBeEquivalentTo(ExpectedResult[8..]);
 
         _modBusConnection.TransactionId.ShouldBe((ushort)(TransactionId + 1));
 
@@ -227,6 +246,11 @@ public class ModBusConnectionTests
             command.Insert(0, FrameStart);
             command.Add(FrameEnd);
             return command;
+        }
+
+        static ReadOnlyMemory<byte> PduDeframer(ReadOnlyMemory<byte> command)
+        {
+            return command[1..^1];
         }
     }
 

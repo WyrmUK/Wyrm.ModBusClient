@@ -114,7 +114,7 @@ public class ModBusClientTests
         Func<IList<byte>, IList<byte>>? setPduFramer = null;
         Mock.Get(_modBusCommand)
             .SetupSet(x => x.PduFramer = It.IsAny<Func<IList<byte>, IList<byte>>?>())
-            .Callback<Func<IList<byte>, IList<byte>>?>(ui => setPduFramer = ui);
+            .Callback<Func<IList<byte>, IList<byte>>?>(fr => setPduFramer = fr);
         Mock.Get(_modBusCommand)
             .SetupGet(x => x.PduFramer)
             .Returns(() => setPduFramer);
@@ -126,6 +126,30 @@ public class ModBusClientTests
         return;
 
         static IList<byte> PduFramer(IList<byte> command) => command;
+    }
+
+    #endregion
+
+    #region Pdu Deframer
+
+    [Fact]
+    public void PduDeframer_Should_Get_What_Is_Set()
+    {
+        Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>? setPduDeframer = null;
+        Mock.Get(_modBusCommand)
+            .SetupSet(x => x.PduDeframer = It.IsAny<Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>?>())
+            .Callback<Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>?>(df => setPduDeframer = df);
+        Mock.Get(_modBusCommand)
+            .SetupGet(x => x.PduDeframer)
+            .Returns(() => setPduDeframer);
+
+        _modbusClient.PduDeframer = PduDeframer;
+
+        _modbusClient.PduDeframer.ShouldBe(PduDeframer);
+
+        return;
+
+        static ReadOnlyMemory<byte> PduDeframer(ReadOnlyMemory<byte> command) => command;
     }
 
     #endregion

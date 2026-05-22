@@ -8,6 +8,7 @@ internal interface IModBusConnection : IDisposable
     byte UnitIdentifier { get; set; }
     ushort TransactionId { get; set; }
     Func<IList<byte>, IList<byte>>? PduFramer { get; set; }
+    Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>? PduDeframer { get; set; }
     ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken);
     ValueTask<ReadOnlyMemory<byte>> PerformFunctionAsync(byte functionNumber, ushort[] parameters, byte[] values, CancellationToken cancellationToken);
     void Close();

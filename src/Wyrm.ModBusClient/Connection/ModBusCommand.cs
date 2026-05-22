@@ -35,6 +35,12 @@ internal class ModBusCommand(
         set => _modBusConnection.PduFramer = value;
     }
 
+    public Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>? PduDeframer
+    {
+        get => _modBusConnection.PduDeframer;
+        set => _modBusConnection.PduDeframer = value;
+    }
+
     public ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken) =>
         _modBusConnection.ConnectAsync(endPoint, cancellationToken);
 

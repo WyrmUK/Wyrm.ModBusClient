@@ -2,6 +2,7 @@
 using Moq;
 using Shouldly;
 using System.Net;
+using System.Text;
 using Wyrm.ModBusClient.Connection;
 using Wyrm.ModBusClient.IntegrationTests.Fakes;
 using Wyrm.ModBusClient.Socket;
@@ -370,6 +371,68 @@ public class ModBusClientTests
         _modbusClient.Close();
 
         result.ShouldBeEquivalentTo(expected);
+    }
+
+    #endregion
+
+    #region Framer Deframer
+
+    private const ushort ProtocolIdentifier = 0x0001;
+    private const ushort TransactionId = 0x5959;
+    private const byte GivUnitId = 0x01;
+    private const byte GivFuncNo = 0x02;
+    private static readonly byte[] Padding = new byte[16];
+    private static readonly byte[] CheckSum = [0xf2, 0x8b];
+    private const string WifiHost = "WH2311F150";
+    private static readonly byte[] WifiHostBytes = Encoding.ASCII.GetBytes(WifiHost);
+    private const string SerialNo = "FA2311F150";
+    private static readonly byte[] SerialNoBytes = Encoding.ASCII.GetBytes(SerialNo);
+    private string _wifiHost = string.Empty;
+    private string _serialNo = string.Empty;
+
+    public static readonly TheoryData<byte, ushort, ushort, byte[], byte[], ICollection<ushort>> ReadGivEnergyInputRegistersRequestsResponses = new()
+    {
+        { 17, 0, 60, [ TransactionId >> 8, TransactionId & 0xff, ProtocolIdentifier >> 8, ProtocolIdentifier & 0xff, 0, 28, GivUnitId, GivFuncNo, ..Padding, 0, 8, 17, 4, 0, 0, 0, 60, ..CheckSum ], [ TransactionId >> 8, TransactionId & 0xff, ProtocolIdentifier >> 8, ProtocolIdentifier & 0xff, 0, 158, GivUnitId, GivFuncNo, ..WifiHostBytes, 0, 0, 0, 0, 0, 0, 0, 138, 17, 4, ..SerialNoBytes, 0, 0, 0, 60, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0xb8, 0x00, 0x00, 0x09, 0x6f, 0x00, 0x00, 0xa8, 0xdc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0xcb, 0xa1, 0x13, 0x92, 0x00, 0x02, 0x0b, 0x41, 0x14, 0x1e, 0x00, 0x8c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3b, 0xc5, 0x00, 0x00, 0xff, 0xd2, 0x00, 0x51, 0x00, 0x48, 0x00, 0x00, 0x41, 0xbb, 0x00, 0x00, 0xfe, 0x90, 0x00, 0x00, 0x00, 0x03, 0x17, 0xf5, 0x00, 0x00, 0x00, 0x17, 0x00, 0x1a, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x90, 0x01, 0x42, 0x02, 0xf1, 0x00, 0x97, 0x00, 0x00, 0xdf, 0x1a, 0x00, 0x00, 0x61, 0xf5, 0x00, 0x01, 0x14, 0x50, 0x00, 0x00, 0x00, 0x00, 0x09, 0x6f, 0x13, 0x94, 0x01, 0x87, 0x01, 0x22, 0x00, 0x00, 0x01, 0x42, 0x00, 0x05, 0xd3, 0x72 ], [ 0x0001, 0x0000, 0x0000, 0x10b8, 0x0000, 0x096f, 0x0000, 0xa8dc, 0x0000, 0x0000, 0x0006, 0x0000, 0xcba1, 0x1392, 0x0002, 0x0b41, 0x141e, 0x008c, 0x0000, 0x0000, 0x0000, 0x0000, 0x3bc5, 0x0000, 0xffd2, 0x0051, 0x0048, 0x0000, 0x41bb, 0x0000, 0xfe90, 0x0000, 0x0003, 0x17f5, 0x0000, 0x0017, 0x001a, 0x0019, 0x0000, 0x0000, 0x0000, 0x0190, 0x0142, 0x02f1, 0x0097, 0x0000, 0xdf1a, 0x0000, 0x61f5, 0x0001, 0x1450, 0x0000, 0x0000, 0x096f, 0x1394, 0x0187, 0x0122, 0x0000, 0x0142, 0x0005 ] }
+    };
+
+    [Theory, MemberData(nameof(ReadGivEnergyInputRegistersRequestsResponses))]
+    public async Task ReadGivEnergyInputRegistersAsync_Should_Return_Correct_Data(byte unitIdentifier, ushort startingRegister, ushort registersToRead, byte[] sent, byte[] read, ICollection<ushort> expected)
+    {
+        _socketWrapper.SendReceiveData = [(sent, read)];
+
+        _modbusClient.ProtocolIdentifier = ProtocolIdentifier;
+        _modbusClient.UnitIdentifier = unitIdentifier;
+        _modbusClient.TransactionId = TransactionId;
+        await _modbusClient.ConnectAsync(TestEndPoint, TestContext.Current.CancellationToken);
+        _modbusClient.PduFramer = PduFramer;
+        _modbusClient.PduDeframer = PduDeframer;
+        var result = await _modbusClient.ReadInputRegistersAsync(startingRegister, registersToRead, TestContext.Current.CancellationToken);
+        _modbusClient.Close();
+
+        result.ShouldBeEquivalentTo(expected);
+        _wifiHost.ShouldBe(WifiHost);
+        _serialNo.ShouldBe(SerialNo);
+    }
+
+    private IList<byte> PduFramer(IList<byte> command)
+    {
+        var count = command.Count + 2;
+        var givCommand = new List<byte>([ GivUnitId, GivFuncNo, ..Padding, (byte)(count >> 8), (byte)(count &0xff) ]);
+        givCommand.AddRange(command);
+        givCommand.AddRange(CheckSum);
+        return givCommand;
+    }
+
+    private ReadOnlyMemory<byte> PduDeframer(ReadOnlyMemory<byte> givResponse)
+    {
+        _wifiHost = Encoding.ASCII.GetString([.. givResponse.Slice(2, 16).TrimEnd((byte)0).ToArray()]);
+        _serialNo = Encoding.ASCII.GetString([.. givResponse.Slice(22, 10).TrimEnd((byte)0).ToArray()]);
+        var response = new List<byte>();
+        response.AddRange(givResponse.Slice(20, 2).Span);
+        var bytes = givResponse.Span[35] * 2;
+        response.Add((byte)bytes);
+        response.AddRange(givResponse.Slice(36, bytes).Span);
+        return new ReadOnlyMemory<byte>(response.ToArray());
     }
 
     #endregion
