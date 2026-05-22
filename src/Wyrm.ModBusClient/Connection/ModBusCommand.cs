@@ -11,6 +11,12 @@ internal class ModBusCommand(
     private const int MaximumFileRecordsValues = 251;
     private const byte FileReferenceType = 6;
 
+    public ushort ProtocolIdentifier
+    {
+        get => _modBusConnection.ProtocolIdentifier;
+        set => _modBusConnection.ProtocolIdentifier = value;
+    }
+
     public byte UnitIdentifier
     {
         get => _modBusConnection.UnitIdentifier;

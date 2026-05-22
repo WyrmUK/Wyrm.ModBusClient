@@ -9,6 +9,11 @@ public interface IModBusClient
 {
     // https://www.modbus.org/file/secure/modbusprotocolspecification.pdf
     /// <summary>
+    /// Gets and sets the Protocol Identifier (defaults to 0).
+    /// This should only be set to something other than 0 if the vendor specific implementation requires it.
+    /// </summary>
+    ushort ProtocolIdentifier { get; set; }
+    /// <summary>
     /// Gets and sets the Unit Identifier (defaults to 1).
     /// Typically this is either 1 or 255 (vendor specific).
     /// </summary>

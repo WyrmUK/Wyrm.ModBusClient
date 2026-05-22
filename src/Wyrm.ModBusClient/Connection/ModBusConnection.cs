@@ -8,10 +8,11 @@ internal sealed class ModBusConnection(
     IModBusSocketFactory _modBusSocketFactory) : IModBusConnection
 {
     private IModBusSocket? _socket;
-    private readonly byte[] _protocolIdentifier = [0, 0];
     private const int MbapHeaderPlusFunctionLength = 8;
     private const byte ExceptionFlag = 0x80;
     private const byte FunctionMask = 0x7F;
+
+    public ushort ProtocolIdentifier { get; set; }
 
     public byte UnitIdentifier { get; set; } = 1;
 
@@ -105,8 +106,7 @@ internal sealed class ModBusConnection(
 
         buffer.AddRange(GetBytes(TransactionId++));
 
-        buffer.Add(_protocolIdentifier[1]);
-        buffer.Add(_protocolIdentifier[0]);
+        buffer.AddRange(GetBytes(ProtocolIdentifier));
 
         buffer.AddRange(GetBytes((ushort)(command.Count + 1)));
 

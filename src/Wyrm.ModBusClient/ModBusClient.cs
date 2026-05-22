@@ -23,6 +23,12 @@ internal sealed class ModBusClient(
     private const byte ReadFifoQueueFunction = 24;
     private const byte ReadDeviceIdentifierFunction = 43;
 
+    public ushort ProtocolIdentifier
+    {
+        get => _modBusCommand.ProtocolIdentifier;
+        set => _modBusCommand.ProtocolIdentifier = value;
+    }
+
     public byte UnitIdentifier
     {
         get => _modBusCommand.UnitIdentifier;

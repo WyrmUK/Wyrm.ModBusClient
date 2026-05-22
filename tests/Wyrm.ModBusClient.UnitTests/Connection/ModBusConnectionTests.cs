@@ -28,6 +28,20 @@ public class ModBusConnectionTests
             .Returns(_modBusSocket);
     }
 
+    #region Protocol Identifier
+
+    [Fact]
+    public void ProtocolIdentifier_Should_Get_What_Is_Set()
+    {
+        const ushort protocolIdentifier = 0x0001;
+
+        _modBusConnection.ProtocolIdentifier = protocolIdentifier;
+
+        _modBusConnection.ProtocolIdentifier.ShouldBe(protocolIdentifier);
+    }
+
+    #endregion
+
     #region Unit Identifier
 
     [Fact]
@@ -40,6 +54,8 @@ public class ModBusConnectionTests
         _modBusConnection.UnitIdentifier.ShouldBe(unitIdentitier);
     }
 
+    #endregion
+
     #region Transaction Id
 
     [Fact]
@@ -51,8 +67,6 @@ public class ModBusConnectionTests
 
         _modBusConnection.TransactionId.ShouldBe(transactionId);
     }
-
-    #endregion
 
     #endregion
 
@@ -113,10 +127,11 @@ public class ModBusConnectionTests
     private const byte FunctionNumber = 2;
     private const byte UnitIdentifier = 5;
     private const ushort TransactionId = 0x5959;
+    private const ushort ProtocolIdentifier = 0x0001;
     private static readonly ushort[] UshortParameters = [ 0x0001, 0xFFFF ];
     private static readonly byte[] ByteParameters = [ 0x01, 0xFF ];
-    private static readonly byte[] ExpectedCommand = [ TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 8, UnitIdentifier, FunctionNumber, 0x00, 0x01, 0xFF, 0xFF, 0x01, 0xFF ];
-    private static readonly byte[] ExpectedResult = [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, UnitIdentifier, FunctionNumber, 3, 4, 5 ];
+    private static readonly byte[] ExpectedCommand = [ TransactionId >> 8, TransactionId & 0xFF, ProtocolIdentifier >> 8, ProtocolIdentifier & 0xFF, 0, 8, UnitIdentifier, FunctionNumber, 0x00, 0x01, 0xFF, 0xFF, 0x01, 0xFF ];
+    private static readonly byte[] ExpectedResult = [TransactionId >> 8, TransactionId & 0xFF, ProtocolIdentifier >> 8, ProtocolIdentifier & 0xFF, 0, 5, UnitIdentifier, FunctionNumber, 3, 4, 5 ];
 
     public static readonly TheoryData<byte[], ModBusExceptionCode> ErrorData = new()
     {
@@ -168,6 +183,7 @@ public class ModBusConnectionTests
             .ReturnsAsync(() => receiveData);
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        _modBusConnection.ProtocolIdentifier = ProtocolIdentifier;
         _modBusConnection.UnitIdentifier = UnitIdentifier;
         _modBusConnection.TransactionId = TransactionId;
 

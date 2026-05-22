@@ -20,6 +20,27 @@ public class ModBusCommandTests
     private const ushort StartingAddress = 0x0123;
     private const ushort StartingAddressWrite = 0x0234;
 
+    #region Protocol Identifier
+
+    [Fact]
+    public void ProtocolIdentifier_Should_Get_What_Is_Set()
+    {
+        const ushort protocolIdentifier = 0x0001;
+        ushort setProtocolIdentifier = 0;
+        Mock.Get(_modBusConnection)
+            .SetupSet(x => x.ProtocolIdentifier = It.IsAny<ushort>())
+            .Callback<ushort>(ui => setProtocolIdentifier = ui);
+        Mock.Get(_modBusConnection)
+            .SetupGet(x => x.ProtocolIdentifier)
+            .Returns(() => setProtocolIdentifier);
+
+        _modBusCommand.ProtocolIdentifier = protocolIdentifier;
+
+        _modBusCommand.ProtocolIdentifier.ShouldBe(protocolIdentifier);
+    }
+
+    #endregion
+
     #region Unit Identifier
 
     [Fact]
