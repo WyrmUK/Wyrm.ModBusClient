@@ -187,6 +187,7 @@ public class ModBusConnectionTests
             .ReturnsAsync(() => new ReadOnlyMemory<byte>(result));
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        _modBusConnection.TransactionId = TransactionId;
 
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
 
