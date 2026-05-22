@@ -41,6 +41,12 @@ internal sealed class ModBusClient(
         set => _modBusCommand.TransactionId = value;
     }
 
+    public Func<IList<byte>, IList<byte>>? PduFramer
+    {
+        get => _modBusCommand.PduFramer;
+        set => _modBusCommand.PduFramer = value;
+    }
+
     public async ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken)
     {
         if (_logger.IsEnabled(LogLevel.Information))

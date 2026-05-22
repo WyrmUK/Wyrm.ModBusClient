@@ -52,7 +52,7 @@ public class ModBusClientTests
         ushort setProtocolIdentifier = 0;
         Mock.Get(_modBusCommand)
             .SetupSet(x => x.ProtocolIdentifier = It.IsAny<ushort>())
-            .Callback<ushort>(ui => setProtocolIdentifier = ui);
+            .Callback<ushort>(pi => setProtocolIdentifier = pi);
         Mock.Get(_modBusCommand)
             .SetupGet(x => x.ProtocolIdentifier)
             .Returns(() => setProtocolIdentifier);
@@ -94,7 +94,7 @@ public class ModBusClientTests
         ushort setTransactionId = 0;
         Mock.Get(_modBusCommand)
             .SetupSet(x => x.TransactionId = It.IsAny<ushort>())
-            .Callback<ushort>(ui => setTransactionId = ui);
+            .Callback<ushort>(ti => setTransactionId = ti);
         Mock.Get(_modBusCommand)
             .SetupGet(x => x.TransactionId)
             .Returns(() => setTransactionId);
@@ -102,6 +102,30 @@ public class ModBusClientTests
         _modbusClient.TransactionId = transactionId;
 
         _modbusClient.TransactionId.ShouldBe(transactionId);
+    }
+
+    #endregion
+
+    #region Pdu Framer
+
+    [Fact]
+    public void PduFramer_Should_Get_What_Is_Set()
+    {
+        Func<IList<byte>, IList<byte>>? setPduFramer = null;
+        Mock.Get(_modBusCommand)
+            .SetupSet(x => x.PduFramer = It.IsAny<Func<IList<byte>, IList<byte>>?>())
+            .Callback<Func<IList<byte>, IList<byte>>?>(ui => setPduFramer = ui);
+        Mock.Get(_modBusCommand)
+            .SetupGet(x => x.PduFramer)
+            .Returns(() => setPduFramer);
+
+        _modbusClient.PduFramer = PduFramer;
+
+        _modbusClient.PduFramer.ShouldBe(PduFramer);
+
+        return;
+
+        static IList<byte> PduFramer(IList<byte> command) => command;
     }
 
     #endregion

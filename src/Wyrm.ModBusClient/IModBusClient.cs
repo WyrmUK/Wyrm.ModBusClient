@@ -24,6 +24,11 @@ public interface IModBusClient
     /// </summary>
     ushort TransactionId { get; set; }
     /// <summary>
+    /// Gets and sets an optional framer function (defaults to null).
+    /// If specified, this is called with the extended PDU (Unit Identifier + PDU) and should return the framed PDU.
+    /// </summary>
+    Func<IList<byte>, IList<byte>>? PduFramer { get; set; }
+    /// <summary>
     /// Connects the client to a ModBus server.
     /// </summary>
     /// <param name="endPoint">The <see cref="IPEndPoint"/> to connect to.</param>

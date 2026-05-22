@@ -70,6 +70,22 @@ public class ModBusConnectionTests
 
     #endregion
 
+    #region Pdu Framer
+
+    [Fact]
+    public void PduFramer_Should_Get_What_Is_Set()
+    {
+        _modBusConnection.PduFramer = PduFramer;
+
+        _modBusConnection.PduFramer.ShouldBe(PduFramer);
+
+        return;
+
+        static IList<byte> PduFramer(IList<byte> command) => command;
+    }
+
+    #endregion
+
     #region Connect
 
     [Fact]
@@ -128,6 +144,8 @@ public class ModBusConnectionTests
     private const byte UnitIdentifier = 5;
     private const ushort TransactionId = 0x5959;
     private const ushort ProtocolIdentifier = 0x0001;
+    private const byte FrameStart = 0x11;
+    private const byte FrameEnd = 0x12;
     private static readonly ushort[] UshortParameters = [ 0x0001, 0xFFFF ];
     private static readonly byte[] ByteParameters = [ 0x01, 0xFF ];
     private static readonly byte[] ExpectedCommand = [ TransactionId >> 8, TransactionId & 0xFF, ProtocolIdentifier >> 8, ProtocolIdentifier & 0xFF, 0, 8, UnitIdentifier, FunctionNumber, 0x00, 0x01, 0xFF, 0xFF, 0x01, 0xFF ];
@@ -166,15 +184,20 @@ public class ModBusConnectionTests
         exception.InnerException.ShouldBe(socketException);
     }
 
-    [Fact]
-    public async Task PerformFunctionAsync_Should_Format_Command_Correctly_And_Return_Result()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PerformFunctionAsync_Should_Format_Command_Correctly_And_Return_Result(bool withFramer)
     {
         ReadOnlyMemory<byte> receiveData = new();
         Mock.Get(_modBusSocket)
             .Setup(x => x.SendAsync(It.IsAny<ReadOnlyMemory<byte>>(), TestContext.Current.CancellationToken))
             .Callback<ReadOnlyMemory<byte>, CancellationToken>((sent, _) =>
             {
-                if (!sent.Span.SequenceEqual(ExpectedCommand)) return;
+                var expectedCommand = withFramer
+                    ? ExpectedCommand[0..5].Concat([(byte)(ExpectedCommand[5] + 2)]).Concat([FrameStart]).Concat(ExpectedCommand[6..]).Concat([FrameEnd]).ToArray()
+                    : ExpectedCommand;
+                if (!sent.Span.SequenceEqual(expectedCommand)) return;
 
                 receiveData = ExpectedResult;
             });
@@ -186,12 +209,25 @@ public class ModBusConnectionTests
         _modBusConnection.ProtocolIdentifier = ProtocolIdentifier;
         _modBusConnection.UnitIdentifier = UnitIdentifier;
         _modBusConnection.TransactionId = TransactionId;
+        if (withFramer)
+        {
+            _modBusConnection.PduFramer = PduFramer;
+        }
 
         var result = await _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken);
 
         result.ShouldBeEquivalentTo(new ReadOnlyMemory<byte>(ExpectedResult).Slice(8));
 
         _modBusConnection.TransactionId.ShouldBe((ushort)(TransactionId + 1));
+
+        return;
+
+        static IList<byte> PduFramer(IList<byte> command)
+        {
+            command.Insert(0, FrameStart);
+            command.Add(FrameEnd);
+            return command;
+        }
     }
 
     [Theory]

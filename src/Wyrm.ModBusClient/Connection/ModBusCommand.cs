@@ -29,6 +29,12 @@ internal class ModBusCommand(
         set => _modBusConnection.TransactionId = value;
     }
 
+    public Func<IList<byte>, IList<byte>>? PduFramer
+    {
+        get => _modBusConnection.PduFramer;
+        set => _modBusConnection.PduFramer = value;
+    }
+
     public ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken) =>
         _modBusConnection.ConnectAsync(endPoint, cancellationToken);
 

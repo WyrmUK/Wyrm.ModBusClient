@@ -46,6 +46,23 @@ _modBusClient.ProtocolIdentifier = 1;
 ...
 _modBusClient.Close();
 ```
+You can also set a framer function to be used for all subsequent functions. Usually this isn't required but some vendors have a custom protocol.
+The framer function takes the extended PDU (Unit Identifier + PDU) and should return the framed PDU in its entirety.
+```csharp
+_modBusClient.PduFramer = PduFramerFunc;
+var coils = await _modBusClient.ReadCoilsAsync(1, 5, ct);
+...
+private IList<byte> PduFramerFunc(IList<byte> command)
+{
+    var framedCommand = new List<byte>();
+    framedCommand.AddRange([0x01, 0x02]);
+    framedCommand.AddRange(new byte[16]);
+    framedCommand.AddRange([0, (byte)(command.Count + 2)]);
+    framedCommand.AddRange(command);
+    framedCommand.AddRange(CheckSumBytes(command));
+    return framedCommand;
+}
+```
 
 ### Implemented Functions
 

@@ -18,6 +18,8 @@ internal sealed class ModBusConnection(
 
     public ushort TransactionId { get; set; } = 1;
 
+    public Func<IList<byte>, IList<byte>>? PduFramer { get; set; }
+
     public ValueTask ConnectAsync(EndPoint endPoint, CancellationToken cancellationToken)
     {
         _socket ??= _modBusSocketFactory.CreateSocket(endPoint);
@@ -45,7 +47,7 @@ internal sealed class ModBusConnection(
         if (_socket == null)
             throw new ModBusClientException("ModBus Client: Socket not connected.", ModBusExceptionCode.SocketNotConnected);
 
-        var data = BuildCommand(functionNumber, parameters, values);
+        var data = BuildCommand(functionNumber, parameters, values, PduFramer);
 
         var receivedData = await SendReceiveDataAsync(data, cancellationToken);
 
@@ -80,10 +82,11 @@ internal sealed class ModBusConnection(
         _socket = null;
     }
 
-    private ReadOnlyMemory<byte> BuildCommand(byte functionNumber, ICollection<ushort> parameters, ICollection<byte>? values = null)
+    private ReadOnlyMemory<byte> BuildCommand(byte functionNumber, ICollection<ushort> parameters, ICollection<byte> values, Func<IList<byte>, IList<byte>>? pduFramer)
     {
         var command = new List<byte>
         {
+            UnitIdentifier, // Not strictly part of the PDU but can be framed.
             functionNumber
         };
 
@@ -92,15 +95,12 @@ internal sealed class ModBusConnection(
             command.AddRange(GetBytes(parameter));
         }
 
-        if (values != null)
-        {
-            command.AddRange(values);
-        }
+        command.AddRange(values);
 
-        return BuildCommand(command);
+        return BuildCommand(pduFramer?.Invoke(command) ?? command);
     }
 
-    private ReadOnlyMemory<byte> BuildCommand(List<byte> command)
+    private ReadOnlyMemory<byte> BuildCommand(IList<byte> command)
     {
         var buffer = new List<byte>();
 
@@ -108,9 +108,7 @@ internal sealed class ModBusConnection(
 
         buffer.AddRange(GetBytes(ProtocolIdentifier));
 
-        buffer.AddRange(GetBytes((ushort)(command.Count + 1)));
-
-        buffer.Add(UnitIdentifier);
+        buffer.AddRange(GetBytes((ushort)command.Count));
 
         buffer.AddRange(command);
 
