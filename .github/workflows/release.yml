@@ -1,0 +1,32 @@
+# This workflow will release a .NET project
+# For more information see: https://docs.github.com/en/actions/publishing-packages/about-packaging-with-github-actions
+
+name: Wyrm.ModBusClient Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.0.x'
+    - name: Restore dependencies
+      run: dotnet restore src/Wyrm.ModBusClient/Wyrm.ModBusClient.csproj
+    - name: Pack
+      run: dotnet pack src/Wyrm.ModBusClient/Wyrm.ModBusClient.csproj --no-restore --configuration Release --output "NugetPackage"
+    - name: Push package to nuget
+      run: dotnet nuget push "NugetPackage/*.nupkg" -k ${{secrets.NUGET_TOKEN}} -s https://api.nuget.org/v3/index.json
