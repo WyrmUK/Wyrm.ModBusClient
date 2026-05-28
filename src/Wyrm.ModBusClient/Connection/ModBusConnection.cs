@@ -46,29 +46,57 @@ internal sealed class ModBusConnection(
 
     public async ValueTask<ReadOnlyMemory<byte>> PerformFunctionAsync(byte functionNumber, ushort[] parameters, byte[] values, CancellationToken cancellationToken)
     {
+        var transactionId = await RequestFunctionAsync(functionNumber, parameters, values, cancellationToken);
+
+        var receivedFunctionData = await PerformReadAsync(cancellationToken);
+
+        if (transactionId != receivedFunctionData.TransactionId)
+            throw new ModBusClientException("ModBus Client: Incorrect transaction id received.", ModBusExceptionCode.IncorrectTransactionIdReceived);
+
+        if ((receivedFunctionData.FunctionNumber & FunctionMask) != functionNumber)
+            throw new ModBusClientException("ModBus Client: Incorrect function received.", ModBusExceptionCode.IncorrectFunctionReceived);
+
+        return receivedFunctionData.Data;
+    }
+
+    public async ValueTask<ushort> RequestFunctionAsync(byte functionNumber, ushort[] parameters, byte[] values, CancellationToken cancellationToken)
+    {
         if (_socket == null)
             throw new ModBusClientException("ModBus Client: Socket not connected.", ModBusExceptionCode.SocketNotConnected);
 
+        var transactionId = TransactionId;
+
         var data = BuildCommand(functionNumber, parameters, values, PduFramer);
 
-        var receivedData = await SendReceiveDataAsync(data, cancellationToken);
+        await SendDataAsync(data, cancellationToken);
+
+        return transactionId;
+    }
+
+    public async ValueTask<FunctionData> PerformReadAsync(CancellationToken cancellationToken)
+    {
+        if (_socket == null)
+            throw new ModBusClientException("ModBus Client: Socket not connected.", ModBusExceptionCode.SocketNotConnected);
+
+        var receivedData = await ReceiveDataAsync(cancellationToken);
 
         if (receivedData.Length < MbapHeaderPlusFunctionLength + 1)
             throw new ModBusClientException("ModBus Client: Insufficient data.", ModBusExceptionCode.InsufficientData);
 
-        if (!data[..2].Span.SequenceEqual(receivedData[..2].Span))
-            throw new ModBusClientException("ModBus Client: Incorrect transaction id received.", ModBusExceptionCode.IncorrectTransactionIdReceived);
+        var receivedDataSpan = receivedData.Span;
+
+        ushort transactionId = (ushort)((receivedDataSpan[0] << 8) + receivedDataSpan[1]);
 
         if (PduDeframer != null)
         {
             var deframedPdu = PduDeframer.Invoke(receivedData[(MbapHeaderPlusFunctionLength - 2)..]);
             receivedData = new ReadOnlyMemory<byte>(receivedData[..(MbapHeaderPlusFunctionLength - 2)].ToArray().Concat(deframedPdu.ToArray()).ToArray());
+            receivedDataSpan = receivedData.Span;
         }
 
-        var receivedFunction = receivedData.Span[MbapHeaderPlusFunctionLength - 1];
+        var unitIdentifier = receivedDataSpan[MbapHeaderPlusFunctionLength - 2];
 
-        if ((receivedFunction & FunctionMask) != functionNumber)
-            throw new ModBusClientException("ModBus Client: Incorrect function received.", ModBusExceptionCode.IncorrectFunctionReceived);
+        var receivedFunction = receivedDataSpan[MbapHeaderPlusFunctionLength - 1];
 
         if (receivedFunction >= ExceptionFlag)
         {
@@ -76,7 +104,7 @@ internal sealed class ModBusConnection(
             throw new ModBusClientException($"ModBus Client: Received exception: {exceptionCode}", exceptionCode);
         }
 
-        return receivedData[MbapHeaderPlusFunctionLength..];
+        return new FunctionData(transactionId, unitIdentifier, receivedFunction, receivedData[MbapHeaderPlusFunctionLength..]);
     }
 
     public void Close()
@@ -123,16 +151,27 @@ internal sealed class ModBusConnection(
         return new ReadOnlyMemory<byte>([.. buffer]);
     }
 
-    private async ValueTask<ReadOnlyMemory<byte>> SendReceiveDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
+    private async ValueTask SendDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
         try
         {
             await _socket!.SendAsync(data, cancellationToken);
-            return await _socket.ReceiveAsync(cancellationToken);
         }
         catch (SocketException ex)
         {
-            throw new ModBusClientException("ModBus Client: Socket Error while reading coils.", ModBusExceptionCode.SocketError, ex);
+            throw new ModBusClientException("ModBus Client: Socket Error.", ModBusExceptionCode.SocketError, ex);
+        }
+    }
+
+    private async ValueTask<ReadOnlyMemory<byte>> ReceiveDataAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _socket!.ReceiveAsync(cancellationToken);
+        }
+        catch (SocketException ex)
+        {
+            throw new ModBusClientException("ModBus Client: Socket Error.", ModBusExceptionCode.SocketError, ex);
         }
     }
 

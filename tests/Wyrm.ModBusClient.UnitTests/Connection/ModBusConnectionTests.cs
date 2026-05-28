@@ -272,6 +272,154 @@ public class ModBusConnectionTests
 
     #endregion
 
+    #region Request Function
+
+    [Fact]
+    public async Task RequestFunctionAsync_Should_Throw_ModBusClientException_If_Not_Connected()
+    {
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.RequestFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketNotConnected);
+    }
+
+    [Fact]
+    public async Task RequestFunctionAsync_Should_Throw_ModBusClientException_For_SocketException()
+    {
+        var socketException = new SocketException();
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.SendAsync(It.IsAny<ReadOnlyMemory<byte>>(), TestContext.Current.CancellationToken))
+            .Throws(socketException);
+
+        await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.RequestFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketError);
+        exception.InnerException.ShouldBe(socketException);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RequestFunctionAsync_Should_Format_Command_Correctly(bool withFramer)
+    {
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.SendAsync(It.IsAny<ReadOnlyMemory<byte>>(), TestContext.Current.CancellationToken))
+            .Callback<ReadOnlyMemory<byte>, CancellationToken>((sent, _) =>
+            {
+                var expectedCommand = withFramer
+                    ? [.. ExpectedCommand[0..5], (byte)(ExpectedCommand[5] + 2), FrameStart, .. ExpectedCommand[6..], FrameEnd]
+                    : ExpectedCommand;
+                if (!sent.Span.SequenceEqual(expectedCommand)) throw new ArgumentException();
+            });
+
+        await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        _modBusConnection.ProtocolIdentifier = ProtocolIdentifier;
+        _modBusConnection.UnitIdentifier = UnitIdentifier;
+        _modBusConnection.TransactionId = TransactionId;
+        if (withFramer)
+        {
+            _modBusConnection.PduFramer = PduFramer;
+        }
+
+        var result = await _modBusConnection.RequestFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken);
+
+        result.ShouldBe((ushort)(_modBusConnection.TransactionId - 1));
+
+        return;
+
+        static IList<byte> PduFramer(IList<byte> command)
+        {
+            command.Insert(0, FrameStart);
+            command.Add(FrameEnd);
+            return command;
+        }
+    }
+
+    #endregion
+
+    #region Perform Read
+
+    public static readonly TheoryData<byte[], ModBusExceptionCode> ReadErrorData = new()
+    {
+        { [TransactionId >> 8, TransactionId & 0xFF, 0], ModBusExceptionCode.InsufficientData },
+        { [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, 1, 0x80 + FunctionNumber, 1], ModBusExceptionCode.IllegalFunction }
+    };
+
+    [Fact]
+    public async Task PerformReadAsync_Should_Throw_ModBusClientException_If_Not_Connected()
+    {
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketNotConnected);
+    }
+
+    [Fact]
+    public async Task PerformReadAsync_Should_Throw_ModBusClientException_For_SocketException()
+    {
+        var socketException = new SocketException();
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.ReceiveAsync(TestContext.Current.CancellationToken))
+            .Throws(socketException);
+
+        await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketError);
+        exception.InnerException.ShouldBe(socketException);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PerformReadAsync_Should_Return_Correct_Result(bool withFramer)
+    {
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.ReceiveAsync(TestContext.Current.CancellationToken))
+            .ReturnsAsync(() => withFramer
+                    ? [.. ExpectedResult[0..5], (byte)(ExpectedResult[5] + 2), FrameStart, .. ExpectedResult[6..], FrameEnd]
+                    : ExpectedResult);
+
+        await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        if (withFramer)
+        {
+            _modBusConnection.PduDeframer = PduDeframer;
+        }
+
+        var result = await _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken);
+
+        result.Data.ToArray().ShouldBeEquivalentTo(ExpectedResult[8..]);
+
+        result.UnitIdentifier.ShouldBe(UnitIdentifier);
+        result.FunctionNumber.ShouldBe(FunctionNumber);
+        result.TransactionId.ShouldBe(TransactionId);
+
+        return;
+
+        static ReadOnlyMemory<byte> PduDeframer(ReadOnlyMemory<byte> command)
+        {
+            return command[1..^1];
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ReadErrorData))]
+    public async Task PerformReadAsync_Should_Throw_ModBusClientException_For_Errors(byte[] result, ModBusExceptionCode expectedCode)
+    {
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.ReceiveAsync(TestContext.Current.CancellationToken))
+            .ReturnsAsync(() => new ReadOnlyMemory<byte>(result));
+
+        await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldNotBeNull().ExceptionCode.ShouldBe(expectedCode);
+    }
+
+    #endregion
+
     #region Close
 
     [Fact]
