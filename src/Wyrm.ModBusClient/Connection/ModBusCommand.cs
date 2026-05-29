@@ -56,11 +56,12 @@ internal class ModBusCommand(
 
     public async ValueTask<ICollection<ushort>> ReadUshortValuesAsync(byte functionNumber, ushort startingAddress, ushort ushortsToRead, CancellationToken cancellationToken)
     {
-        await ReadUshortValuesRequestAsync(functionNumber, startingAddress, ushortsToRead, cancellationToken);
+        if (ushortsToRead > MaximumUshortValues)
+            throw new ModBusClientException("ModBus Client: Too many values requested.", ModBusExceptionCode.TooManyUshortValues);
 
-        var ushortData = await ReadUshortValuesResponseAsync(cancellationToken);
+        var ushortsData = await _modBusConnection.PerformFunctionAsync(functionNumber, [startingAddress, ushortsToRead], [], cancellationToken);
 
-        return ushortData.UshortData;
+        return GetUshortValues(ushortsData, ushortsToRead);
     }
 
     public async ValueTask WriteBitValuesAsync(byte functionNumber, ushort startingCoil, ICollection<bool> values, CancellationToken cancellationToken)
