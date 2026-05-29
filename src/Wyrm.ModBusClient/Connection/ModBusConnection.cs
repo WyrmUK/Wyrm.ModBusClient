@@ -61,7 +61,7 @@ internal sealed class ModBusConnection(
 
     public async ValueTask<ushort> RequestFunctionAsync(byte functionNumber, ushort[] parameters, byte[] values, CancellationToken cancellationToken)
     {
-        if (_socket == null)
+        if (!(_socket?.Connected ?? false))
             throw new ModBusClientException("ModBus Client: Socket not connected.", ModBusExceptionCode.SocketNotConnected);
 
         var transactionId = TransactionId;
@@ -75,7 +75,7 @@ internal sealed class ModBusConnection(
 
     public async ValueTask<FunctionData> PerformReadAsync(CancellationToken cancellationToken)
     {
-        if (_socket == null)
+        if (!(_socket?.Connected ?? false))
             throw new ModBusClientException("ModBus Client: Socket not connected.", ModBusExceptionCode.SocketNotConnected);
 
         var receivedData = await ReceiveDataAsync(cancellationToken);

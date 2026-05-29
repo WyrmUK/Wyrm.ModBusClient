@@ -8,6 +8,8 @@ internal sealed class ModBusSocket(
     public ValueTask ConnectAsync(EndPoint remoteEP, CancellationToken cancellationToken) =>
         _socket.ConnectAsync(remoteEP, cancellationToken);
 
+    public bool Connected => _socket.Connected;
+
     public async ValueTask<int> SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
         var sent = 0;

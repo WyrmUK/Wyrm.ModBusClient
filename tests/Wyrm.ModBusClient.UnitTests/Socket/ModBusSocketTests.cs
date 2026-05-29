@@ -36,6 +36,22 @@ public class ModBusSocketTests
 
     #endregion
 
+    #region Connected
+
+    [Fact]
+    public void Connected_Should_Get_Socket_Connected()
+    {
+        Mock.Get(_socketWrapper)
+            .Setup(x => x.Connected)
+            .Returns(true);
+
+        var result = _modBusSocket.Connected;
+
+        result.ShouldBeTrue();
+    }
+
+    #endregion
+
     #region Send
 
     [Fact]

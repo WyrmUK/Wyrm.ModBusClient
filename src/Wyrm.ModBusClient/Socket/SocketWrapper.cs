@@ -17,6 +17,8 @@ internal class SocketWrapper(
         return _socket.ConnectAsync(remoteEP, cancellationToken);
     }
 
+    public bool Connected => _socket.Connected;
+
     public void Close()
     {
         _socket.Shutdown(SocketShutdown.Both);

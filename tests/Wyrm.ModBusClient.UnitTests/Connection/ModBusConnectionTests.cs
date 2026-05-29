@@ -176,9 +176,19 @@ public class ModBusConnectionTests
         { [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, 1, 0x80 + FunctionNumber, 1], ModBusExceptionCode.IllegalFunction }
     };
 
-    [Fact]
-    public async Task PerformFunctionAsync_Should_Throw_ModBusClientException_If_Not_Connected()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PerformFunctionAsync_Should_Throw_ModBusClientException_If_Not_Connected(bool afterConnect)
     {
+        if (afterConnect)
+        {
+            await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+            Mock.Get(_modBusSocket)
+                .Setup(x => x.Connected)
+                .Returns(false);
+        }
+
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
 
         exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketNotConnected);
@@ -193,6 +203,9 @@ public class ModBusConnectionTests
             .Throws(socketException);
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
 
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
 
@@ -224,6 +237,9 @@ public class ModBusConnectionTests
             .ReturnsAsync(() => receiveData);
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
         _modBusConnection.ProtocolIdentifier = ProtocolIdentifier;
         _modBusConnection.UnitIdentifier = UnitIdentifier;
         _modBusConnection.TransactionId = TransactionId;
@@ -263,6 +279,9 @@ public class ModBusConnectionTests
             .ReturnsAsync(() => new ReadOnlyMemory<byte>(result));
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
         _modBusConnection.TransactionId = TransactionId;
 
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
@@ -274,9 +293,19 @@ public class ModBusConnectionTests
 
     #region Request Function
 
-    [Fact]
-    public async Task RequestFunctionAsync_Should_Throw_ModBusClientException_If_Not_Connected()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RequestFunctionAsync_Should_Throw_ModBusClientException_If_Not_Connected(bool afterConnect)
     {
+        if (afterConnect)
+        {
+            await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+            Mock.Get(_modBusSocket)
+                .Setup(x => x.Connected)
+                .Returns(false);
+        }
+
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.RequestFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
 
         exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketNotConnected);
@@ -291,6 +320,9 @@ public class ModBusConnectionTests
             .Throws(socketException);
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
 
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.RequestFunctionAsync(FunctionNumber, UshortParameters, ByteParameters, TestContext.Current.CancellationToken).AsTask());
 
@@ -314,6 +346,9 @@ public class ModBusConnectionTests
             });
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
         _modBusConnection.ProtocolIdentifier = ProtocolIdentifier;
         _modBusConnection.UnitIdentifier = UnitIdentifier;
         _modBusConnection.TransactionId = TransactionId;
@@ -346,9 +381,19 @@ public class ModBusConnectionTests
         { [TransactionId >> 8, TransactionId & 0xFF, 0, 0, 0, 5, 1, 0x80 + FunctionNumber, 1], ModBusExceptionCode.IllegalFunction }
     };
 
-    [Fact]
-    public async Task PerformReadAsync_Should_Throw_ModBusClientException_If_Not_Connected()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PerformReadAsync_Should_Throw_ModBusClientException_If_Not_Connected(bool afterConnect)
     {
+        if (afterConnect)
+        {
+            await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+            Mock.Get(_modBusSocket)
+                .Setup(x => x.Connected)
+                .Returns(false);
+        }
+
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken).AsTask());
 
         exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.SocketNotConnected);
@@ -363,6 +408,9 @@ public class ModBusConnectionTests
             .Throws(socketException);
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
 
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken).AsTask());
 
@@ -382,6 +430,9 @@ public class ModBusConnectionTests
                     : ExpectedResult);
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
         if (withFramer)
         {
             _modBusConnection.PduDeframer = PduDeframer;
@@ -412,6 +463,9 @@ public class ModBusConnectionTests
             .ReturnsAsync(() => new ReadOnlyMemory<byte>(result));
 
         await _modBusConnection.ConnectAsync(_endPoint, TestContext.Current.CancellationToken);
+        Mock.Get(_modBusSocket)
+            .Setup(x => x.Connected)
+            .Returns(true);
 
         var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusConnection.PerformReadAsync(TestContext.Current.CancellationToken).AsTask());
 
