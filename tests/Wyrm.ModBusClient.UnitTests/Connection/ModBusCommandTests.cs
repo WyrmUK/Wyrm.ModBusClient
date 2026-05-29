@@ -470,6 +470,56 @@ public class ModBusCommandTests
 
     #endregion
 
+    #region Read Ushort Values Request
+
+    [Fact]
+    public async Task ReadUshortValuesRequestAsync_Should_Throw_ModBusClientException_If_Too_Many_Values_Requested()
+    {
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modBusCommand.ReadUshortValuesRequestAsync(FunctionNumber, StartingAddress, 126, TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldNotBeNull().ExceptionCode.ShouldBe(ModBusExceptionCode.TooManyUshortValues);
+    }
+
+    [Fact]
+    public async Task ReadUshortValuesRequestAsync_Should_Issue_Correct_Request()
+    {
+        const ushort ushortsToRead = 4;
+        const ushort transactionId = 0x5959;
+        Mock.Get(_modBusConnection)
+            .Setup(x => x.RequestFunctionAsync(FunctionNumber, It.Is<ushort[]>(a => a.SequenceEqual(new ushort[] { StartingAddress, ushortsToRead })), It.Is<byte[]>(a => a.Length == 0), TestContext.Current.CancellationToken))
+            .ReturnsAsync(transactionId);
+
+        var result = await _modBusCommand.ReadUshortValuesRequestAsync(FunctionNumber, StartingAddress, ushortsToRead, TestContext.Current.CancellationToken);
+
+        result.ShouldBe(transactionId);
+    }
+
+    #endregion
+
+    #region Read Ushort Values Response
+
+    [Fact]
+    public async Task ReadUshortValuesResponseAsync_Should_Return_Correct_Response()
+    {
+        byte[] ushortsResult = [8, 0xC5, 0x0A, 0x00, 0x01, 0x34, 0x56, 0xFF, 0xFF];
+        var functionData = new FunctionData(0x5959, 0x31, 0x04, ushortsResult);
+        Mock.Get(_modBusConnection)
+            .Setup(x => x.PerformReadAsync(TestContext.Current.CancellationToken))
+            .ReturnsAsync(functionData);
+
+        var result = await _modBusCommand.ReadUshortValuesResponseAsync(TestContext.Current.CancellationToken);
+
+        result.ShouldBeEquivalentTo(new UshortDataResponse
+        {
+            TransactionId = functionData.TransactionId,
+            UnitIdentifier = functionData.UnitIdentifier,
+            FunctionNumber = functionData.FunctionNumber,
+            UshortData = new List<ushort> { 0xC50A, 0x0001, 0x3456, 0xFFFF }
+        });
+    }
+
+    #endregion
+
     #region Close
 
     [Fact]

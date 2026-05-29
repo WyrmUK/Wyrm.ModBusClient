@@ -21,5 +21,7 @@ internal interface IModBusCommand
     ValueTask<DeviceIdentifierResult> ReadDeviceIdentifiersAsync(byte functionNumber, byte readDeviceId, byte objectId, CancellationToken cancellationToken);
     ValueTask<ReadOnlyMemory<byte>> PerformFunctionAsync(byte functionNumber, ushort[] parameters, CancellationToken cancellationToken);
     ValueTask<ReadOnlyMemory<byte>> PerformFunctionAsync(byte functionNumber, ushort[] parameters, byte[] values, CancellationToken cancellationToken);
+    ValueTask<ushort> ReadUshortValuesRequestAsync(byte functionNumber, ushort startingAddress, ushort ushortsToRead, CancellationToken cancellationToken);
+    ValueTask<UshortDataResponse> ReadUshortValuesResponseAsync(CancellationToken cancellationToken);
     void Close();
 }
