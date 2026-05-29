@@ -18,6 +18,8 @@ internal class FakeSocket : ISocketWrapper
         return ValueTask.CompletedTask;
     }
 
+    public bool Connected => RemoteEP != null;
+
     public ValueTask<int> SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
     {
         if (RemoteEP == null) throw new SocketException((int)SocketError.NotConnected);
