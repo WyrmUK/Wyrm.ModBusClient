@@ -12,8 +12,6 @@ internal class SocketWrapper(
 
     public ValueTask ConnectAsync(EndPoint remoteEP, CancellationToken cancellationToken)
     {
-        _socket.SendTimeout = DefaultTimeout;
-        _socket.ReceiveTimeout = DefaultTimeout;
         return _socket.ConnectAsync(remoteEP, cancellationToken);
     }
 

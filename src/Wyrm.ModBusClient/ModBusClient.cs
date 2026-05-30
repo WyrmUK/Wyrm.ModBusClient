@@ -414,6 +414,65 @@ internal sealed class ModBusClient(
         }
     }
 
+    public async ValueTask ReadHoldingRegistersRequestAsync(ushort startingRegister, ushort registersToRead, CancellationToken cancellationToken)
+    {
+        if (_logger.IsEnabled(LogLevel.Information))
+            _logger.LogInformation("ModBus Client: Requesting read for {NumberOfRegisters} holding registers from: {RegisterAddress}", registersToRead, startingRegister);
+
+        try
+        {
+            await _modBusCommand.ReadUshortValuesRequestAsync(ReadHoldingRegistersFunction, startingRegister, registersToRead, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("ModBus Client: Read requested for {NumberOfRegisters} holding registers from: {RegisterAddress}", registersToRead, startingRegister);
+        }
+        catch (ModBusClientException ex)
+        {
+            _logger.LogError(ex, "ModBus Client: Exception while requesting read of holding registers: {ExceptionCode}", ex.ExceptionCode);
+            throw;
+        }
+    }
+
+    public async ValueTask ReadInputRegistersRequestAsync(ushort startingRegister, ushort registersToRead, CancellationToken cancellationToken)
+    {
+        if (_logger.IsEnabled(LogLevel.Information))
+            _logger.LogInformation("ModBus Client: Requesting read for {NumberOfRegisters} input registers from: {RegisterAddress}", registersToRead, startingRegister);
+
+        try
+        {
+            var registerValues = await _modBusCommand.ReadUshortValuesRequestAsync(ReadInputRegistersFunction, startingRegister, registersToRead, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("ModBus Client: Read requested for {NumberOfRegisters} input registers from: {RegisterAddress}", registersToRead, startingRegister);
+        }
+        catch (ModBusClientException ex)
+        {
+            _logger.LogError(ex, "ModBus Client: Exception while requesting read of input registers: {ExceptionCode}", ex.ExceptionCode);
+            throw;
+        }
+    }
+
+    public async ValueTask<UshortDataResponse> ReadRegistersResponseDataAsync(CancellationToken cancellationToken)
+    {
+        if (_logger.IsEnabled(LogLevel.Information))
+            _logger.LogInformation("ModBus Client: Reading register values.");
+
+        try
+        {
+            var registerValues = await _modBusCommand.ReadUshortValuesResponseAsync(cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("ModBus Client: Read {NumberOfRegisters} register values.", registerValues.UshortData.Count);
+
+            return registerValues;
+        }
+        catch (ModBusClientException ex)
+        {
+            _logger.LogError(ex, "ModBus Client: Exception while reading register values: {ExceptionCode}", ex.ExceptionCode);
+            throw;
+        }
+    }
+
     public void Close()
     {
         _logger.LogInformation("ModBus Client: Closing connection");

@@ -626,6 +626,95 @@ public class ModBusClientTests
 
     #endregion
 
+    #region Read Holding Registers Request
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    public async Task ReadHoldingRegistersRequestAsync_Should_Issue_Correct_Command(ushort numToRead)
+    {
+        await _modbusClient.ReadHoldingRegistersRequestAsync(StartingAddress, numToRead, TestContext.Current.CancellationToken);
+
+        Mock.Get(_modBusCommand)
+            .Verify(x => x.ReadUshortValuesRequestAsync(ReadHoldingRegistersFunction, StartingAddress, numToRead, TestContext.Current.CancellationToken), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReadHoldingRegistersRequestAsync_Should_Throw_ModBusClientException()
+    {
+        var endPoint = Mock.Of<EndPoint>();
+        Mock.Get(_modBusCommand)
+            .Setup(x => x.ReadUshortValuesRequestAsync(ReadHoldingRegistersFunction, StartingAddress, It.IsAny<ushort>(), TestContext.Current.CancellationToken))
+            .Throws(TestException);
+
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modbusClient.ReadHoldingRegistersRequestAsync(StartingAddress, 5, TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldBe(TestException);
+    }
+
+    #endregion
+
+    #region Read Input Registers Request
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    public async Task ReadInputRegistersRequestAsync_Should_Issue_Correct_Command(ushort numToRead)
+    {
+        await _modbusClient.ReadInputRegistersRequestAsync(StartingAddress, numToRead, TestContext.Current.CancellationToken);
+
+        Mock.Get(_modBusCommand)
+            .Verify(x => x.ReadUshortValuesRequestAsync(ReadInputRegistersFunction, StartingAddress, numToRead, TestContext.Current.CancellationToken), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReadInputRegistersRequestAsync_Should_Throw_ModBusClientException()
+    {
+        var endPoint = Mock.Of<EndPoint>();
+        Mock.Get(_modBusCommand)
+            .Setup(x => x.ReadUshortValuesRequestAsync(ReadInputRegistersFunction, StartingAddress, It.IsAny<ushort>(), TestContext.Current.CancellationToken))
+            .Throws(TestException);
+
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modbusClient.ReadInputRegistersRequestAsync(StartingAddress, 5, TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldBe(TestException);
+    }
+
+    #endregion
+
+    #region Read Registers Response
+
+    [Fact]
+    public async Task ReadRegistersResponseDataAsync_Should_Read_Correct_Response()
+    {
+        var expectedResult = new UshortDataResponse
+        {
+            UshortData = []
+        };
+        Mock.Get(_modBusCommand)
+            .Setup(x => x.ReadUshortValuesResponseAsync(TestContext.Current.CancellationToken))
+            .ReturnsAsync(expectedResult);
+
+        var result = await _modbusClient.ReadRegistersResponseDataAsync(TestContext.Current.CancellationToken);
+
+        result.ShouldBeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public async Task ReadRegistersResponseDataAsync_Should_Throw_ModBusClientException()
+    {
+        var endPoint = Mock.Of<EndPoint>();
+        Mock.Get(_modBusCommand)
+            .Setup(x => x.ReadUshortValuesResponseAsync(TestContext.Current.CancellationToken))
+            .Throws(TestException);
+
+        var exception = await Should.ThrowAsync<ModBusClientException>(() => _modbusClient.ReadRegistersResponseDataAsync(TestContext.Current.CancellationToken).AsTask());
+
+        exception.ShouldBe(TestException);
+    }
+
+    #endregion
+
     #region Close
 
     [Fact]

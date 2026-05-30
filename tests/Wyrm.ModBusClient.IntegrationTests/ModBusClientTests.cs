@@ -375,6 +375,58 @@ public class ModBusClientTests
 
     #endregion
 
+    #region Read Holding Registers Request/Response
+
+    private const byte ReadHoldingRegistersFunction = 3;
+
+    [Theory, MemberData(nameof(ReadHoldingRegistersRequestsResponses))]
+    public async Task ReadHoldingRegistersRequestAsync_Should_Return_Correct_Response_Data(byte unitIdentifier, ushort startingRegister, ushort registersToRead, byte[] sent, byte[] read, ICollection<ushort> expected)
+    {
+        _socketWrapper.SendReceiveData = [(sent, read)];
+
+        _modbusClient.UnitIdentifier = unitIdentifier;
+        await _modbusClient.ConnectAsync(TestEndPoint, TestContext.Current.CancellationToken);
+        await _modbusClient.ReadHoldingRegistersRequestAsync(startingRegister, registersToRead, TestContext.Current.CancellationToken);
+        var result = await _modbusClient.ReadRegistersResponseDataAsync(TestContext.Current.CancellationToken);
+        _modbusClient.Close();
+
+        result.ShouldBeEquivalentTo(new UshortDataResponse
+        {
+            TransactionId = 1,
+            UnitIdentifier = unitIdentifier,
+            FunctionNumber = ReadHoldingRegistersFunction,
+            UshortData = expected
+        });
+    }
+
+    #endregion
+
+    #region Read Input Registers Request/Response
+
+    private const byte ReadInputRegistersFunction = 4;
+
+    [Theory, MemberData(nameof(ReadInputRegistersRequestsResponses))]
+    public async Task ReadInputRegistersRequestAsync_Should_Return_Correct_Response_Data(byte unitIdentifier, ushort startingRegister, ushort registersToRead, byte[] sent, byte[] read, ICollection<ushort> expected)
+    {
+        _socketWrapper.SendReceiveData = [(sent, read)];
+
+        _modbusClient.UnitIdentifier = unitIdentifier;
+        await _modbusClient.ConnectAsync(TestEndPoint, TestContext.Current.CancellationToken);
+        await _modbusClient.ReadInputRegistersRequestAsync(startingRegister, registersToRead, TestContext.Current.CancellationToken);
+        var result = await _modbusClient.ReadRegistersResponseDataAsync(TestContext.Current.CancellationToken);
+        _modbusClient.Close();
+
+        result.ShouldBeEquivalentTo(new UshortDataResponse
+        {
+            TransactionId = 1,
+            UnitIdentifier = unitIdentifier,
+            FunctionNumber = ReadInputRegistersFunction,
+            UshortData = expected
+        });
+    }
+
+    #endregion
+
     #region Framer Deframer
 
     private const ushort ProtocolIdentifier = 0x0001;

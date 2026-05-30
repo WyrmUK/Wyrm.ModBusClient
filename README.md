@@ -76,22 +76,54 @@ private ReadOnlyMemory<byte> PduDeframerFunc(ReadOnlyMemory<byte> response)
     return response.Slice(20, (response.Length - 22));
 }
 ```
+The functions will only return when data has been received so need to be cancelled if they run for too long.
+
+## Request/Response Functions
+Some systems issue multiple register value responses for one request.
+To support those, there are specific request functions for the two read register functions and a generic read response.
+```csharp
+await _modBusClient.ConnectAsync(endPoint, ct);
+...
+await _modBusClient.ReadHoldingRegistersRequestAsync(1, 5, ct);
+...
+while (true)
+{
+    try
+    {
+        var response = _modBusClient.ReadRegistersResponseDataAsync(ct);
+        this.ProcessResponse(response);
+    }
+    catch (ModBusClientException)
+    {
+    }
+    catch (OperationCanceledException)
+    {
+        break;
+    }
+}
+...
+_modBusClient.Close();
+```
+The idea here is that there is a constant loop requesting data and processing the responses, and the requests are issued separately (such as on a timer).
 
 ### Implemented Functions
 
-| Function                        |
-|---------------------------------|
-| ReadCoilsAsync                  |
-| ReadDiscreteInputsAsync         |
-| ReadHoldingRegistersAsync       |
-| ReadInputRegistersAsync         |
-| WriteSingleCoilAsync            |
-| WriteSingleRegisterAsync        |
-| WriteMultipleCoilsAsync         |
-| WriteMultipleRegistersAsync     |
-| ReadFileRecordAsync             |
-| WriteFileRecordAsync            |
-| MaskWriteRegisterAsync          |
-| ReadWriteMultipleRegistersAsync |
-| ReadFifoQueueAsync              |
-| ReadDeviceIdentifierAsync       |
+| Function                         |
+|----------------------------------|
+| ReadCoilsAsync                   |
+| ReadDiscreteInputsAsync          |
+| ReadHoldingRegistersAsync        |
+| ReadInputRegistersAsync          |
+| WriteSingleCoilAsync             |
+| WriteSingleRegisterAsync         |
+| WriteMultipleCoilsAsync          |
+| WriteMultipleRegistersAsync      |
+| ReadFileRecordAsync              |
+| WriteFileRecordAsync             |
+| MaskWriteRegisterAsync           |
+| ReadWriteMultipleRegistersAsync  |
+| ReadFifoQueueAsync               |
+| ReadDeviceIdentifierAsync        |
+| ReadHoldingRegistersRequestAsync |
+| ReadInputRegistersRequestAsync   |
+| ReadRegistersResponseDataAsync   |
