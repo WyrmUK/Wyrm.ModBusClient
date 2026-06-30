@@ -2,7 +2,7 @@
 
 namespace Wyrm.ModBusClient.Connection;
 
-internal class ModBusCommand(
+internal sealed class ModBusCommand(
     IModBusConnection _modBusConnection) : IModBusCommand
 {
     private const int MaximumBitValues = 2000;

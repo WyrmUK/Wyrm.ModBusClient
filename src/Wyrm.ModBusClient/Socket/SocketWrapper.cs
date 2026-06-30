@@ -5,7 +5,7 @@ using System.Net.Sockets;
 namespace Wyrm.ModBusClient.Socket;
 
 [ExcludeFromCodeCoverage(Justification = "This is essentially a wrapper of the Socket class.")]
-internal class SocketWrapper(
+internal sealed class SocketWrapper(
     System.Net.Sockets.Socket _socket) : ISocketWrapper
 {
     private const int DefaultTimeout = 10_000;

@@ -2,7 +2,7 @@
 
 namespace Wyrm.ModBusClient.Socket;
 
-internal class ModBusSocketFactory(
+internal sealed class ModBusSocketFactory(
     ISocketFactory _socketFactory) : IModBusSocketFactory
 {
     public IModBusSocket CreateSocket(EndPoint endPoint)
