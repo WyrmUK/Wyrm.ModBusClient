@@ -8,8 +8,6 @@ namespace Wyrm.ModBusClient.Socket;
 internal sealed class SocketWrapper(
     System.Net.Sockets.Socket _socket) : ISocketWrapper
 {
-    private const int DefaultTimeout = 10_000;
-
     public ValueTask ConnectAsync(EndPoint remoteEP, CancellationToken cancellationToken)
     {
         return _socket.ConnectAsync(remoteEP, cancellationToken);
